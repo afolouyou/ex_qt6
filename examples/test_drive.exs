@@ -27,30 +27,28 @@ defmodule TestDrive do
     {:ok, group_layout} = ExQt6.Layout.form(app)
     ExQt6.Layout.set_layout(group_layout, app, group)
 
-    {:ok, info_label} = ExQt6.Widget.new_label(app, "Digite algo:")
     {:ok, lineedit} = ExQt6.Widget.new_lineedit(app, "")
     ExQt6.Widget.set_tooltip(lineedit, app, "Digite para ver text_changed")
-    ExQt6.Layout.form_add_row(group_layout, app, info_label, lineedit)
+    ExQt6.Layout.form_add_row(group_layout, app, "Digite algo:", lineedit)
 
     {:ok, combo_label} = ExQt6.Widget.new_label(app, "Linguagem:")
     {:ok, combo} = ExQt6.Widget.new_combobox(app, ["Elixir", "Rust", "C++", "Nix"])
-    ExQt6.Layout.form_add_row(group_layout, app, combo_label, combo)
+    ExQt6.Layout.form_add_row_widget(group_layout, app, combo_label, combo)
 
     {:ok, checkbox} = ExQt6.Widget.new_checkbox(app, "Modo Escuro")
     ExQt6.Layout.form_add_row(group_layout, app, checkbox)
 
-    slider_label = ExQt6.Widget.new_label(app, "Volume:")
-    {:ok, slider} = ExQt6.Widget.new_slider(app, 0, 100, 50)
-    {:ok, progress} = ExQt6.Widget.new_progressbar(app, 0, 100, 50)
+    {:ok, slider} = ExQt6.Widget.new_slider(app, min: 0, max: 100, value: 50)
+    {:ok, progress} = ExQt6.Widget.new_progressbar(app, 0, 100, value: 50)
 
     {:ok, slider_hbox} = ExQt6.Layout.hbox(app)
     ExQt6.Layout.add(slider_hbox, app, slider)
     ExQt6.Layout.add(slider_hbox, app, progress)
 
-    ExQt6.Layout.form_add_row(group_layout, app, slider_label, slider_hbox)
+    ExQt6.Layout.add_layout(group_layout, app, slider_hbox)
 
     {:ok, btn_layout} = ExQt6.Layout.hbox(app)
-    ExQt6.Layout.add(main_layout, app, btn_layout)
+    ExQt6.Layout.add_layout(main_layout, app, btn_layout)
 
     {:ok, btn_test} = ExQt6.Widget.new_button(app, "Testar")
     {:ok, btn_msg} = ExQt6.Widget.new_button(app, "MessageBox")

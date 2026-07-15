@@ -90,7 +90,7 @@ defmodule Calculator do
         %{state | current: format(val / 100), fresh: true}
       label in ["+","−","×","÷"] ->
         val = parse_num(state.current)
-        if state.op and not state.fresh do
+        if state.op != nil and not state.fresh do
           result = calculate(state.operand, val, state.op)
           %{current: format(result), op: label, operand: result, fresh: true}
         else
