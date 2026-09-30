@@ -4,7 +4,7 @@ Qt6 UI toolkit for Elixir. Build desktop GUI applications using Qt6 through a li
 
 ## Features
 
-- **16 widget types**: Window, Button, Label, LineEdit, ComboBox, CheckBox, RadioButton, Slider, SpinBox, ProgressBar, TabWidget, GroupBox, TextEdit, Tree, ButtonGroup, Splitter
+- **20 widget types**: Window, Button, Label, LineEdit, ComboBox, CheckBox, RadioButton, Slider, SpinBox, ProgressBar, TabWidget, GroupBox, TextEdit, Tree, ButtonGroup, Splitter, ListWidget, ScrollArea, ScrollBar, ToolButton
 - **4 layout types**: VBox, HBox, Grid (with row/col span), Form
 - **Dialogs**: MessageBox, FileDialog
 - **Properties**: enable/disable, visible/hidden, tooltip, CSS styling, geometry, size constraints
@@ -138,6 +138,10 @@ All widget creation and manipulation happens through the daemon. Events flow bac
 | `Widget.new_tree/3` | QTreeWidget |
 | `Widget.new_buttongroup/2` | QButtonGroup |
 | `Widget.new_splitter/3` | QSplitter |
+| `Widget.new_listwidget/2` | QListWidget |
+| `Widget.new_scrollarea/3` | QScrollArea |
+| `Widget.new_scrollbar/3` | QScrollBar |
+| `Widget.new_toolbutton/3` | QToolButton |
 
 ### Layouts
 

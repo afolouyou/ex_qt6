@@ -83,4 +83,12 @@ defmodule ExQt6.App do
     send(state.target, {:daemon_died, reason})
     {:noreply, %{state | daemon: nil, receiver_pid: nil}, {:continue, :start_receiver}}
   end
+
+  def terminate(_reason, %{daemon: %ExQt6.Daemon{} = daemon, receiver_pid: rp}) do
+    ExQt6.Daemon.stop(daemon)
+    if rp, do: Process.unlink(rp)
+    :ok
+  end
+
+  def terminate(_reason, _state), do: :ok
 end

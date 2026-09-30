@@ -27,6 +27,12 @@ defmodule ExQt6.Daemon do
     Port.command(port, json <> "\n")
   end
 
+  def stop(%__MODULE__{port: port}) do
+    Port.command(port, ~s({"name":"quit"}\n))
+    Port.close(port)
+    :ok
+  end
+
   def daemon_path do
     priv = :code.priv_dir(:ex_qt6)
     Path.join(priv, "qt_daemon")

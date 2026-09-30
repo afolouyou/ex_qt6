@@ -11,7 +11,7 @@ defmodule ExQt6.Widget do
     receive do
       {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, id}
     after
-      timeout -> {:error, :timeout}
+      2000 -> {:error, :timeout}
     end
   end
 
@@ -21,6 +21,7 @@ defmodule ExQt6.Widget do
   @spec new_window(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_window(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_window"})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :window}}
       error -> error
@@ -33,6 +34,7 @@ defmodule ExQt6.Widget do
   @spec new_button(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_button(app, text, timeout \\ 2000) when is_binary(text) do
     ExQt6.App.cmd(app, %{name: "create_button", text: text})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :button}}
       error -> error
@@ -45,6 +47,7 @@ defmodule ExQt6.Widget do
   @spec new_label(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_label(app, text \\ "", timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_label", text: text})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :label}}
       error -> error
@@ -59,6 +62,7 @@ defmodule ExQt6.Widget do
     cmd = %{name: "create_lineedit"}
     cmd = if placeholder != "", do: Map.put(cmd, :placeholder, placeholder), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :lineedit}}
       error -> error
@@ -68,9 +72,11 @@ defmodule ExQt6.Widget do
   @doc """
   Cria um novo combo box (QComboBox) com a lista de itens.
   """
-  @spec new_combobox(ExQt6.App.t(), list(String.t()), keyword()) :: {:ok, t()} | {:error, :timeout}
+  @spec new_combobox(ExQt6.App.t(), list(String.t()), keyword()) ::
+          {:ok, t()} | {:error, :timeout}
   def new_combobox(app, items \\ [], timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_combobox", items: items})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :combobox}}
       error -> error
@@ -83,6 +89,7 @@ defmodule ExQt6.Widget do
   @spec new_checkbox(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_checkbox(app, text \\ "", timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_checkbox", text: text})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :checkbox}}
       error -> error
@@ -100,6 +107,7 @@ defmodule ExQt6.Widget do
     cmd = if opts[:value], do: Map.put(cmd, :value, opts[:value]), else: cmd
     cmd = if opts[:orientation], do: Map.put(cmd, :orientation, opts[:orientation]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :slider}}
       error -> error
@@ -114,6 +122,7 @@ defmodule ExQt6.Widget do
     cmd = %{name: "create_textedit"}
     cmd = if text != "", do: Map.put(cmd, :text, text), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :textedit}}
       error -> error
@@ -134,6 +143,7 @@ defmodule ExQt6.Widget do
   @spec get_plaintext(t(), ExQt6.App.t(), keyword()) :: {:ok, String.t()} | {:error, :timeout}
   def get_plaintext(%__MODULE__{id: id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "get_plaintext", id: id})
+
     receive do
       {:qt_event, %{"event" => "text_result", "id" => ^id, "text" => text}} -> {:ok, text}
     after
@@ -201,6 +211,7 @@ defmodule ExQt6.Widget do
     cmd = if opts[:prefix], do: Map.put(cmd, :prefix, opts[:prefix]), else: cmd
     cmd = if opts[:single_step], do: Map.put(cmd, :single_step, opts[:single_step]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :spinbox}}
       error -> error
@@ -217,6 +228,7 @@ defmodule ExQt6.Widget do
     cmd = if opts[:value], do: Map.put(cmd, :value, opts[:value]), else: cmd
     cmd = if opts[:format], do: Map.put(cmd, :format, opts[:format]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :progressbar}}
       error -> error
@@ -229,6 +241,7 @@ defmodule ExQt6.Widget do
   @spec new_tabwidget(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_tabwidget(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_tabwidget"})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :tabwidget}}
       error -> error
@@ -240,7 +253,12 @@ defmodule ExQt6.Widget do
   """
   @spec add_tab(t(), ExQt6.App.t(), t(), String.t()) :: :ok
   def add_tab(%__MODULE__{id: tabwidget_id}, app, %__MODULE__{id: widget_id}, title \\ "") do
-    ExQt6.App.cmd(app, %{name: "add_tab", tabwidget_id: tabwidget_id, widget_id: widget_id, title: title})
+    ExQt6.App.cmd(app, %{
+      name: "add_tab",
+      tabwidget_id: tabwidget_id,
+      widget_id: widget_id,
+      title: title
+    })
   end
 
   @doc """
@@ -257,6 +275,7 @@ defmodule ExQt6.Widget do
   @spec new_groupbox(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_groupbox(app, title, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_groupbox", title: title})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :groupbox}}
       error -> error
@@ -269,6 +288,7 @@ defmodule ExQt6.Widget do
   @spec new_radiobutton(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_radiobutton(app, text \\ "", timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_radiobutton", text: text})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :radiobutton}}
       error -> error
@@ -281,12 +301,15 @@ defmodule ExQt6.Widget do
   @spec new_tree(ExQt6.App.t(), keyword(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_tree(app, opts \\ [], timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_tree"})
+
     case await_widget_created(timeout) do
       {:ok, id} ->
         tree = %__MODULE__{id: id, type: :tree}
         if opts[:headers], do: add_tree_header(tree, app, opts[:headers])
         {:ok, tree}
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -323,8 +346,10 @@ defmodule ExQt6.Widget do
   @spec new_buttongroup(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_buttongroup(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_buttongroup"})
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id, type: :buttongroup}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :buttongroup}}
     after
       timeout -> {:error, :timeout}
     end
@@ -344,6 +369,7 @@ defmodule ExQt6.Widget do
   @spec new_splitter(ExQt6.App.t(), String.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_splitter(app, orientation \\ "horizontal", timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_splitter", orientation: orientation})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :splitter}}
       error -> error
@@ -357,8 +383,10 @@ defmodule ExQt6.Widget do
   def new_dockwidget(app, opts \\ []) do
     title = opts[:title] || "Dock"
     ExQt6.App.cmd(app, %{name: "create_dockwidget", title: title})
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :dockwidget}}
     after
       2000 -> {:error, :timeout}
     end
@@ -372,8 +400,10 @@ defmodule ExQt6.Widget do
     cmd = %{name: "create_textbrowser"}
     cmd = if opts[:text], do: Map.put(cmd, :text, opts[:text]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :textbrowser}}
     after
       2000 -> {:error, :timeout}
     end
@@ -393,8 +423,10 @@ defmodule ExQt6.Widget do
     cmd = if opts[:prefix], do: Map.put(cmd, :prefix, opts[:prefix]), else: cmd
     cmd = if opts[:suffix], do: Map.put(cmd, :suffix, opts[:suffix]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :doublespinbox}}
     after
       2000 -> {:error, :timeout}
     end
@@ -408,10 +440,17 @@ defmodule ExQt6.Widget do
     cmd = %{name: "create_datetimeedit"}
     cmd = if opts[:format], do: Map.put(cmd, :format, opts[:format]), else: cmd
     cmd = if opts[:datetime], do: Map.put(cmd, :datetime, opts[:datetime]), else: cmd
-    cmd = if opts[:calendar_popup] != nil, do: Map.put(cmd, :calendar_popup, opts[:calendar_popup]), else: cmd
+
+    cmd =
+      if opts[:calendar_popup] != nil,
+        do: Map.put(cmd, :calendar_popup, opts[:calendar_popup]),
+        else: cmd
+
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :datetimeedit}}
     after
       2000 -> {:error, :timeout}
     end
@@ -426,8 +465,10 @@ defmodule ExQt6.Widget do
     cmd = if opts[:mode], do: Map.put(cmd, :mode, opts[:mode]), else: cmd
     cmd = if opts[:value], do: Map.put(cmd, :value, opts[:value]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :lcdnumber}}
     after
       2000 -> {:error, :timeout}
     end
@@ -441,8 +482,10 @@ defmodule ExQt6.Widget do
     cmd = %{name: "create_calendarwidget"}
     cmd = if opts[:date], do: Map.put(cmd, :date, opts[:date]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :calendarwidget}}
     after
       2000 -> {:error, :timeout}
     end
@@ -460,8 +503,10 @@ defmodule ExQt6.Widget do
     cmd = if opts[:notches] != nil, do: Map.put(cmd, :notches, opts[:notches]), else: cmd
     cmd = if opts[:wrapping] != nil, do: Map.put(cmd, :wrapping, opts[:wrapping]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :dial}}
     after
       2000 -> {:error, :timeout}
     end
@@ -473,8 +518,10 @@ defmodule ExQt6.Widget do
   @spec new_stackedwidget(ExQt6.App.t()) :: {:ok, t()} | {:error, :timeout}
   def new_stackedwidget(app) do
     ExQt6.App.cmd(app, %{name: "create_stackedwidget"})
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :stackedwidget}}
     after
       2000 -> {:error, :timeout}
     end
@@ -550,6 +597,7 @@ defmodule ExQt6.Widget do
   @spec new_mainwindow(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_mainwindow(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_mainwindow"})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :mainwindow}}
       error -> error
@@ -570,8 +618,10 @@ defmodule ExQt6.Widget do
   @spec new_menu_bar(t(), ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_menu_bar(%__MODULE__{id: widget_id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_menu_bar", widget_id: widget_id})
+
     receive do
-      {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id, type: :menubar}}
+      {:qt_event, %{"event" => "widget_created", "id" => id}} ->
+        {:ok, %__MODULE__{id: id, type: :menubar}}
     after
       timeout -> {:error, :timeout}
     end
@@ -584,6 +634,7 @@ defmodule ExQt6.Widget do
           {:ok, integer()} | {:error, :timeout}
   def menu_bar_add_menu(%__MODULE__{id: menubar_id}, app, title, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "menu_bar_add_menu", menubar_id: menubar_id, title: title})
+
     receive do
       {:qt_event, %{"event" => "menu_created", "id" => id}} -> {:ok, id}
     after
@@ -598,6 +649,7 @@ defmodule ExQt6.Widget do
           {:ok, integer()} | {:error, :timeout}
   def menu_add_action(menu_id, app, text, timeout \\ 2000) when is_integer(menu_id) do
     ExQt6.App.cmd(app, %{name: "menu_add_action", menu_id: menu_id, text: text})
+
     receive do
       {:qt_event, %{"event" => "action_created", "id" => id}} -> {:ok, id}
     after
@@ -620,6 +672,7 @@ defmodule ExQt6.Widget do
           {:ok, integer()} | {:error, :timeout}
   def menu_add_submenu(menu_id, app, title, timeout \\ 2000) when is_integer(menu_id) do
     ExQt6.App.cmd(app, %{name: "menu_add_submenu", menu_id: menu_id, title: title})
+
     receive do
       {:qt_event, %{"event" => "menu_created", "id" => id}} -> {:ok, id}
     after
@@ -634,6 +687,7 @@ defmodule ExQt6.Widget do
           {:ok, t()} | {:error, :timeout}
   def new_toolbar(%__MODULE__{id: widget_id}, app, title \\ "Toolbar", timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_toolbar", widget_id: widget_id, title: title})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :toolbar}}
       error -> error
@@ -647,6 +701,7 @@ defmodule ExQt6.Widget do
           {:ok, integer()} | {:error, :timeout}
   def toolbar_add_button(%__MODULE__{id: toolbar_id}, app, text, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "toolbar_add_button", toolbar_id: toolbar_id, text: text})
+
     receive do
       {:qt_event, %{"event" => "action_created", "id" => id}} -> {:ok, id}
     after
@@ -676,6 +731,7 @@ defmodule ExQt6.Widget do
   @spec new_statusbar(t(), ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def new_statusbar(%__MODULE__{id: widget_id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_statusbar", widget_id: widget_id})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :statusbar}}
       error -> error
@@ -697,6 +753,7 @@ defmodule ExQt6.Widget do
           {:ok, t()} | {:error, :timeout}
   def new_table(app, rows \\ 0, columns \\ 0, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_table", rows: rows, columns: columns})
+
     case await_widget_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id, type: :table}}
       error -> error
@@ -726,8 +783,10 @@ defmodule ExQt6.Widget do
           {:ok, String.t()} | {:error, :timeout}
   def table_get_item(%__MODULE__{id: id}, app, row, col, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "table_get_item", id: id, row: row, column: col})
+
     receive do
-      {:qt_event, %{"event" => "item_result", "id" => ^id, "row" => ^row, "column" => ^col, "text" => text}} ->
+      {:qt_event,
+       %{"event" => "item_result", "id" => ^id, "row" => ^row, "column" => ^col, "text" => text}} ->
         {:ok, text}
     after
       timeout -> {:error, :timeout}
@@ -771,7 +830,13 @@ defmodule ExQt6.Widget do
   """
   @spec table_set_cell_widget(t(), ExQt6.App.t(), integer(), integer(), t()) :: :ok
   def table_set_cell_widget(%__MODULE__{id: table_id}, app, row, col, %__MODULE__{id: widget_id}) do
-    ExQt6.App.cmd(app, %{name: "table_set_cell_widget", id: table_id, row: row, column: col, widget_id: widget_id})
+    ExQt6.App.cmd(app, %{
+      name: "table_set_cell_widget",
+      id: table_id,
+      row: row,
+      column: col,
+      widget_id: widget_id
+    })
   end
 
   @doc """
@@ -882,7 +947,8 @@ defmodule ExQt6.Widget do
   Define a opacidade de um widget (0.0 a 1.0).
   """
   @spec set_opacity(t(), ExQt6.App.t(), float()) :: t()
-  def set_opacity(%__MODULE__{} = w, app, opacity) when is_float(opacity) and opacity >= 0.0 and opacity <= 1.0 do
+  def set_opacity(%__MODULE__{} = w, app, opacity)
+      when is_float(opacity) and opacity >= 0.0 and opacity <= 1.0 do
     ExQt6.App.cmd(app, %{name: "set_opacity", id: w.id, opacity: opacity})
     w
   end
@@ -982,7 +1048,13 @@ defmodule ExQt6.Widget do
   """
   @spec set_label_align(t(), ExQt6.App.t(), String.t(), boolean()) :: t()
   def set_label_align(%__MODULE__{} = widget, app, alignment \\ "left", word_wrap \\ false) do
-    ExQt6.App.cmd(app, %{name: "set_label_align", id: widget.id, alignment: alignment, word_wrap: word_wrap})
+    ExQt6.App.cmd(app, %{
+      name: "set_label_align",
+      id: widget.id,
+      alignment: alignment,
+      word_wrap: word_wrap
+    })
+
     widget
   end
 
@@ -1014,6 +1086,7 @@ defmodule ExQt6.Widget do
     text = opts[:text] || ""
     buttons = opts[:buttons] || ["ok"]
     ExQt6.App.cmd(app, %{name: "msgbox", type: type, title: title, text: text, buttons: buttons})
+
     receive do
       {:qt_event, %{"event" => "msgbox_result", "result" => result}} -> {:ok, result}
     after
@@ -1031,6 +1104,7 @@ defmodule ExQt6.Widget do
     dir = opts[:dir] || ""
     filter = opts[:filter] || ""
     ExQt6.App.cmd(app, %{name: "file_dialog", mode: mode, title: title, dir: dir, filter: filter})
+
     receive do
       {:qt_event, %{"event" => "file_dialog_result", "path" => path}} -> {:ok, path}
     after
@@ -1047,6 +1121,7 @@ defmodule ExQt6.Widget do
     title = opts[:title] || "Pick a Color"
     color = opts[:color] || "#ffffff"
     ExQt6.App.cmd(app, %{name: "color_dialog", id: id, title: title, color: color})
+
     receive do
       {:qt_event, %{"event" => "color_result", "color" => color}} -> {:ok, color}
     after
@@ -1061,9 +1136,18 @@ defmodule ExQt6.Widget do
   def font_dialog(app, opts \\ []) do
     id = opts[:id] || 0
     ExQt6.App.cmd(app, %{name: "font_dialog", id: id})
+
     receive do
       {:qt_event, %{"event" => "font_result", "ok" => true} = r} ->
-        {:ok, %{family: r["family"], size: r["size"], bold: r["bold"], italic: r["italic"], underline: r["underline"]}}
+        {:ok,
+         %{
+           family: r["family"],
+           size: r["size"],
+           bold: r["bold"],
+           italic: r["italic"],
+           underline: r["underline"]
+         }}
+
       {:qt_event, %{"event" => "font_result", "ok" => false}} ->
         {:ok, :cancelled}
     after
@@ -1091,6 +1175,7 @@ defmodule ExQt6.Widget do
     cmd = if opts[:current], do: Map.put(cmd, :current, opts[:current]), else: cmd
     cmd = if opts[:echo], do: Map.put(cmd, :echo, opts[:echo]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
       {:qt_event, %{"event" => "input_result", "ok" => true, "value" => value}} -> {:ok, value}
       {:qt_event, %{"event" => "input_result", "ok" => false}} -> {:ok, :cancelled}
@@ -1113,6 +1198,7 @@ defmodule ExQt6.Widget do
     cmd = if opts[:auto_close] != nil, do: Map.put(cmd, :auto_close, opts[:auto_close]), else: cmd
     cmd = if opts[:auto_reset] != nil, do: Map.put(cmd, :auto_reset, opts[:auto_reset]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     receive do
       {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
     after
@@ -1158,8 +1244,10 @@ defmodule ExQt6.Widget do
   @spec is_progress_canceled(t(), ExQt6.App.t()) :: {:ok, boolean()} | {:error, :timeout}
   def is_progress_canceled(%__MODULE__{id: id}, app) do
     ExQt6.App.cmd(app, %{name: "is_progress_canceled", id: id})
+
     receive do
-      {:qt_event, %{"event" => "progress_canceled_result", "canceled" => canceled}} -> {:ok, canceled}
+      {:qt_event, %{"event" => "progress_canceled_result", "canceled" => canceled}} ->
+        {:ok, canceled}
     after
       2000 -> {:error, :timeout}
     end
@@ -1227,6 +1315,7 @@ defmodule ExQt6.Widget do
   @spec get_text(t(), ExQt6.App.t(), keyword()) :: {:ok, String.t()} | {:error, :timeout}
   def get_text(%__MODULE__{id: id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "get_text", id: id})
+
     receive do
       {:qt_event, %{"event" => "text_result", "id" => ^id, "text" => text}} -> {:ok, text}
     after
@@ -1240,6 +1329,7 @@ defmodule ExQt6.Widget do
   @spec get_value(t(), ExQt6.App.t(), keyword()) :: {:ok, number()} | {:error, :timeout}
   def get_value(%__MODULE__{id: id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "get_value", id: id})
+
     receive do
       {:qt_event, %{"event" => "value_result", "id" => ^id, "value" => value}} -> {:ok, value}
     after
@@ -1253,11 +1343,334 @@ defmodule ExQt6.Widget do
   @spec get_checked(t(), ExQt6.App.t(), keyword()) :: {:ok, boolean()} | {:error, :timeout}
   def get_checked(%__MODULE__{id: id}, app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "get_checked", id: id})
+
     receive do
-      {:qt_event, %{"event" => "checked_result", "id" => ^id, "checked" => checked}} -> {:ok, checked}
+      {:qt_event, %{"event" => "checked_result", "id" => ^id, "checked" => checked}} ->
+        {:ok, checked}
     after
       timeout -> {:error, :timeout}
     end
+  end
+
+  @doc """
+  Cria uma lista de itens (QListWidget).
+  """
+  @spec new_listwidget(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_listwidget(app, timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "create_listwidget"})
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :listwidget}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Adiciona um único item a um QListWidget.
+  """
+  @spec add_list_item(t(), ExQt6.App.t(), String.t()) :: :ok
+  def add_list_item(%__MODULE__{id: id}, app, text) when is_binary(text) do
+    ExQt6.App.cmd(app, %{name: "add_list_item", id: id, text: text})
+  end
+
+  @doc """
+  Adiciona vários itens a um QListWidget.
+  """
+  @spec add_list_items(t(), ExQt6.App.t(), [String.t()]) :: :ok
+  def add_list_items(%__MODULE__{id: id}, app, items) when is_list(items) do
+    ExQt6.App.cmd(app, %{name: "add_list_items", id: id, items: items})
+  end
+
+  @doc """
+  Remove o item na linha especificada de um QListWidget.
+  """
+  @spec list_remove_item(t(), ExQt6.App.t(), integer()) :: :ok
+  def list_remove_item(%__MODULE__{id: id}, app, row) do
+    ExQt6.App.cmd(app, %{name: "list_remove_item", id: id, row: row})
+  end
+
+  @doc """
+  Define a linha atual (selecionada) de um QListWidget.
+  """
+  @spec set_list_current_row(t(), ExQt6.App.t(), integer()) :: :ok
+  def set_list_current_row(%__MODULE__{id: id}, app, row) do
+    ExQt6.App.cmd(app, %{name: "set_list_current_row", id: id, row: row})
+  end
+
+  @doc """
+  Obtém a linha atual (selecionada) de um QListWidget.
+  """
+  @spec get_list_current_row(t(), ExQt6.App.t(), keyword()) ::
+          {:ok, integer()} | {:error, :timeout}
+  def get_list_current_row(%__MODULE__{id: id}, app, timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "get_list_current_row", id: id})
+
+    receive do
+      {:qt_event, %{"event" => "row_result", "id" => ^id, "value" => row}} -> {:ok, row}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  @doc """
+  Define o texto do item na linha especificada de um QListWidget.
+  """
+  @spec set_list_item_text(t(), ExQt6.App.t(), integer(), String.t()) :: :ok
+  def set_list_item_text(%__MODULE__{id: id}, app, row, text) do
+    ExQt6.App.cmd(app, %{name: "set_list_item_text", id: id, row: row, text: text})
+  end
+
+  @doc """
+  Cria uma área de rolagem (QScrollArea) que pode conter outro widget.
+  """
+  @spec new_scrollarea(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_scrollarea(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_scrollarea"}
+    cmd = if opts[:resizable] != nil, do: Map.put(cmd, :resizable, opts[:resizable]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :scrollarea}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Define o widget exibido dentro de um QScrollArea.
+  """
+  @spec scrollarea_set_widget(t(), ExQt6.App.t(), t()) :: :ok
+  def scrollarea_set_widget(%__MODULE__{id: id}, app, %__MODULE__{id: child_id}) do
+    ExQt6.App.cmd(app, %{name: "scrollarea_set_widget", id: id, child_id: child_id})
+  end
+
+  @doc """
+  Cria uma barra de rolagem (QScrollBar) horizontal ou vertical.
+  """
+  @spec new_scrollbar(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_scrollbar(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_scrollbar"}
+    cmd = if opts[:orientation], do: Map.put(cmd, :orientation, opts[:orientation]), else: cmd
+    cmd = if opts[:min], do: Map.put(cmd, :min, opts[:min]), else: cmd
+    cmd = if opts[:max], do: Map.put(cmd, :max, opts[:max]), else: cmd
+    cmd = if opts[:value], do: Map.put(cmd, :value, opts[:value]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :scrollbar}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Cria um botão de ferramenta compacto (QToolButton), usualmente em toolbars.
+  """
+  @spec new_toolbutton(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_toolbutton(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_toolbutton"}
+    cmd = if opts[:text], do: Map.put(cmd, :text, opts[:text]), else: cmd
+    cmd = if opts[:style], do: Map.put(cmd, :style, opts[:style]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :toolbutton}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Define um menu com os itens fornecidos em um QToolButton.
+  """
+  @spec set_toolbutton_menu(t(), ExQt6.App.t(), [String.t()]) :: :ok
+  def set_toolbutton_menu(%__MODULE__{id: id}, app, items) when is_list(items) do
+    ExQt6.App.cmd(app, %{name: "set_toolbutton_menu", id: id, items: items})
+  end
+
+  @doc """
+  Cria uma lista baseada em modelo (QListView). Os itens são definidos com `listview_set_strings/3`.
+  """
+  @spec new_listview(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_listview(app, _opts \\ [], timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "create_listview"})
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :listview}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Define a lista de strings exibida em um QListView.
+  """
+  @spec listview_set_strings(t(), ExQt6.App.t(), list(String.t())) :: :ok
+  def listview_set_strings(%__MODULE__{id: id}, app, items) do
+    ExQt6.App.cmd(app, %{name: "listview_set_strings", id: id, items: items})
+  end
+
+  @doc """
+  Obtém a linha atual (selecionada) de um QListView.
+  """
+  @spec get_listview_current(t(), ExQt6.App.t(), keyword()) ::
+          {:ok, integer()} | {:error, :timeout}
+  def get_listview_current(%__MODULE__{id: id}, app, timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "get_listview_current", id: id})
+
+    receive do
+      {:qt_event, %{"event" => "row_result", "id" => ^id, "value" => row}} -> {:ok, row}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  @doc """
+  Define a linha atual (selecionada) de um QListView.
+  """
+  @spec set_listview_current(t(), ExQt6.App.t(), integer()) :: :ok
+  def set_listview_current(%__MODULE__{id: id}, app, row) do
+    ExQt6.App.cmd(app, %{name: "set_listview_current", id: id, row: row})
+  end
+
+  @doc """
+  Cria uma tabela baseada em modelo (QTableView). Células são definidas com `tableview_set_item/4`.
+  """
+  @spec new_tableview(ExQt6.App.t(), non_neg_integer(), non_neg_integer(), keyword()) ::
+          {:ok, t()} | {:error, :timeout}
+  def new_tableview(app, rows \\ 0, cols \\ 0, _opts \\ [], timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "create_tableview", rows: rows, columns: cols})
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :tableview}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Define o texto de uma célula em um QTableView.
+  """
+  @spec tableview_set_item(t(), ExQt6.App.t(), non_neg_integer(), non_neg_integer(), String.t()) ::
+          :ok
+  def tableview_set_item(%__MODULE__{id: id}, app, row, col, text) do
+    ExQt6.App.cmd(app, %{name: "tableview_set_item", id: id, row: row, column: col, text: text})
+  end
+
+  @doc """
+  Define os cabeçalhos das colunas de um QTableView.
+  """
+  @spec tableview_set_headers(t(), ExQt6.App.t(), list(String.t())) :: :ok
+  def tableview_set_headers(%__MODULE__{id: id}, app, headers) do
+    ExQt6.App.cmd(app, %{name: "tableview_set_headers", id: id, headers: headers})
+  end
+
+  @doc """
+  Cria uma caixa de ferramentas (QToolBox) com itens empilhados.
+  """
+  @spec new_toolbox(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_toolbox(app, _opts \\ [], timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "create_toolbox"})
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :toolbox}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Adiciona um item (widget) a um QToolBox com o rótulo especificado.
+  """
+  @spec toolbox_add_item(t(), ExQt6.App.t(), ExQt6.Widget.t(), String.t()) :: :ok
+  def toolbox_add_item(%__MODULE__{id: id}, app, %ExQt6.Widget{id: widget_id}, label) do
+    ExQt6.App.cmd(app, %{
+      name: "toolbox_add_item",
+      id: id,
+      widget_id: widget_id,
+      label: label
+    })
+  end
+
+  @doc """
+  Cria um editor de tempo (QTimeEdit), restrito a hora/minuto/segundo.
+  """
+  @spec new_timeedit(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_timeedit(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_timeedit"}
+    cmd = if opts[:format], do: Map.put(cmd, :format, opts[:format]), else: cmd
+    cmd = if opts[:time], do: Map.put(cmd, :time, opts[:time]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :timeedit}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Cria um editor de data (QDateEdit), restrito a ano/mês/dia.
+  """
+  @spec new_dateedit(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_dateedit(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_dateedit"}
+    cmd = if opts[:format], do: Map.put(cmd, :format, opts[:format]), else: cmd
+    cmd = if opts[:date], do: Map.put(cmd, :date, opts[:date]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :dateedit}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Cria um combo box de fontes (QFontComboBox) listando as fontes do sistema.
+  """
+  @spec new_fontcombobox(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
+  def new_fontcombobox(app, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_fontcombobox"}
+    cmd = if opts[:font], do: Map.put(cmd, :font, opts[:font]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :fontcombobox}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Obtém a fonte (family) atual selecionada em um QFontComboBox.
+  """
+  @spec get_fontcombobox_current(t(), ExQt6.App.t(), keyword()) ::
+          {:ok, String.t()} | {:error, :timeout}
+  def get_fontcombobox_current(%__MODULE__{id: id}, app, timeout \\ 2000) do
+    ExQt6.App.cmd(app, %{name: "get_fontcombobox_current", id: id})
+
+    receive do
+      {:qt_event, %{"event" => "font_result", "id" => ^id, "value" => family}} ->
+        {:ok, family}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  @doc """
+  Cria um botão de comando (QCommandLinkButton) com texto e descrição opcional.
+  """
+  @spec new_commandlinkbutton(ExQt6.App.t(), String.t(), keyword()) ::
+          {:ok, t()} | {:error, :timeout}
+  def new_commandlinkbutton(app, text, opts \\ [], timeout \\ 2000) do
+    cmd = %{name: "create_commandlinkbutton", text: text}
+    cmd = if opts[:description], do: Map.put(cmd, :description, opts[:description]), else: cmd
+    ExQt6.App.cmd(app, cmd)
+
+    case await_widget_created(timeout) do
+      {:ok, id} -> {:ok, %__MODULE__{id: id, type: :commandlinkbutton}}
+      error -> error
+    end
+  end
+
+  @doc """
+  Define a descrição de um QCommandLinkButton.
+  """
+  @spec set_commandlink_description(t(), ExQt6.App.t(), String.t()) :: :ok
+  def set_commandlink_description(%__MODULE__{id: id}, app, text) do
+    ExQt6.App.cmd(app, %{name: "set_commandlink_description", id: id, text: text})
   end
 end
 
@@ -1276,6 +1689,7 @@ defmodule ExQt6.Timer do
   @spec new(ExQt6.App.t(), integer(), integer()) :: {:ok, t()} | {:error, :timeout}
   def new(app, interval_ms \\ 1000, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_timer", interval: interval_ms})
+
     receive do
       {:qt_event, %{"event" => "widget_created", "id" => id}} -> {:ok, %__MODULE__{id: id}}
     after
@@ -1331,6 +1745,7 @@ defmodule ExQt6.Layout do
   @spec vbox(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def vbox(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_vbox"})
+
     case await_layout_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id}}
       error -> error
@@ -1343,6 +1758,7 @@ defmodule ExQt6.Layout do
   @spec hbox(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def hbox(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_hbox"})
+
     case await_layout_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id}}
       error -> error
@@ -1370,7 +1786,11 @@ defmodule ExQt6.Layout do
   """
   @spec add_layout(t(), ExQt6.App.t(), t()) :: :ok
   def add_layout(%__MODULE__{id: layout_id}, app, %__MODULE__{id: child_layout_id}) do
-    ExQt6.App.cmd(app, %{name: "add_layout", layout_id: layout_id, child_layout_id: child_layout_id})
+    ExQt6.App.cmd(app, %{
+      name: "add_layout",
+      layout_id: layout_id,
+      child_layout_id: child_layout_id
+    })
   end
 
   @doc """
@@ -1384,6 +1804,7 @@ defmodule ExQt6.Layout do
     cmd = if opts[:margin], do: Map.put(cmd, :margin, opts[:margin]), else: cmd
     cmd = if opts[:spacing], do: Map.put(cmd, :spacing, opts[:spacing]), else: cmd
     ExQt6.App.cmd(app, cmd)
+
     case await_layout_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id}}
       error -> error
@@ -1395,8 +1816,22 @@ defmodule ExQt6.Layout do
   """
   @spec grid_add_widget(t(), ExQt6.App.t(), ExQt6.Widget.t(), integer(), integer(), keyword()) ::
           :ok
-  def grid_add_widget(%__MODULE__{id: layout_id}, app, %ExQt6.Widget{id: widget_id}, row, col, opts \\ []) do
-    cmd = %{name: "grid_add_widget", layout_id: layout_id, widget_id: widget_id, row: row, column: col}
+  def grid_add_widget(
+        %__MODULE__{id: layout_id},
+        app,
+        %ExQt6.Widget{id: widget_id},
+        row,
+        col,
+        opts \\ []
+      ) do
+    cmd = %{
+      name: "grid_add_widget",
+      layout_id: layout_id,
+      widget_id: widget_id,
+      row: row,
+      column: col
+    }
+
     cmd = if opts[:row_span], do: Map.put(cmd, :row_span, opts[:row_span]), else: cmd
     cmd = if opts[:col_span], do: Map.put(cmd, :col_span, opts[:col_span]), else: cmd
     ExQt6.App.cmd(app, cmd)
@@ -1407,7 +1842,13 @@ defmodule ExQt6.Layout do
   """
   @spec grid_add_layout(t(), ExQt6.App.t(), t(), integer(), integer()) :: :ok
   def grid_add_layout(%__MODULE__{id: layout_id}, app, %__MODULE__{id: child_id}, row, col) do
-    ExQt6.App.cmd(app, %{name: "grid_add_layout", layout_id: layout_id, child_layout_id: child_id, row: row, column: col})
+    ExQt6.App.cmd(app, %{
+      name: "grid_add_layout",
+      layout_id: layout_id,
+      child_layout_id: child_id,
+      row: row,
+      column: col
+    })
   end
 
   @doc """
@@ -1416,6 +1857,7 @@ defmodule ExQt6.Layout do
   @spec form(ExQt6.App.t(), keyword()) :: {:ok, t()} | {:error, :timeout}
   def form(app, timeout \\ 2000) do
     ExQt6.App.cmd(app, %{name: "create_form"})
+
     case await_layout_created(timeout) do
       {:ok, id} -> {:ok, %__MODULE__{id: id}}
       error -> error
@@ -1426,8 +1868,14 @@ defmodule ExQt6.Layout do
   Adiciona uma linha ao layout de formulário com um rótulo de texto.
   """
   @spec form_add_row(t(), ExQt6.App.t(), String.t(), ExQt6.Widget.t()) :: :ok
-  def form_add_row(%__MODULE__{id: layout_id}, app, label, %ExQt6.Widget{id: widget_id}) when is_binary(label) do
-    ExQt6.App.cmd(app, %{name: "form_add_row", layout_id: layout_id, widget_id: widget_id, label: label})
+  def form_add_row(%__MODULE__{id: layout_id}, app, label, %ExQt6.Widget{id: widget_id})
+      when is_binary(label) do
+    ExQt6.App.cmd(app, %{
+      name: "form_add_row",
+      layout_id: layout_id,
+      widget_id: widget_id,
+      label: label
+    })
   end
 
   @doc """
@@ -1442,7 +1890,17 @@ defmodule ExQt6.Layout do
   Adiciona uma linha ao layout de formulário usando um widget como rótulo.
   """
   @spec form_add_row_widget(t(), ExQt6.App.t(), ExQt6.Widget.t(), ExQt6.Widget.t()) :: :ok
-  def form_add_row_widget(%__MODULE__{id: layout_id}, app, %ExQt6.Widget{id: label_id}, %ExQt6.Widget{id: widget_id}) do
-    ExQt6.App.cmd(app, %{name: "form_add_row_widget", layout_id: layout_id, label_widget_id: label_id, widget_id: widget_id})
+  def form_add_row_widget(
+        %__MODULE__{id: layout_id},
+        app,
+        %ExQt6.Widget{id: label_id},
+        %ExQt6.Widget{id: widget_id}
+      ) do
+    ExQt6.App.cmd(app, %{
+      name: "form_add_row_widget",
+      layout_id: layout_id,
+      label_widget_id: label_id,
+      widget_id: widget_id
+    })
   end
 end

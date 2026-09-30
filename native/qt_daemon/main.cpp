@@ -55,6 +55,21 @@
 #include <QCalendarWidget>
 #include <QDial>
 #include <QStackedWidget>
+#include <QListWidget>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QToolButton>
+#include <QListView>
+#include <QStringListModel>
+#include <QTableView>
+#include <QStandardItemModel>
+#include <QItemSelectionModel>
+#include <QFontDatabase>
+#include <QToolBox>
+#include <QTimeEdit>
+#include <QDateEdit>
+#include <QFontComboBox>
+#include <QCommandLinkButton>
 
 QApplication* g_app = nullptr;
 std::unordered_map<int, QWidget*> g_widgets;
@@ -438,6 +453,317 @@ void process_command(const QJsonObject& cmd) {
         g_widgets[id] = sw;
         QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
     }
+    else if (name == "create_listwidget") {
+        int id = g_next_id++;
+        QListWidget* lw = new QListWidget();
+        g_widgets[id] = lw;
+        QObject::connect(lw, &QListWidget::itemClicked, [id](QListWidgetItem* item) {
+            QJsonObject r; r["event"] = "item_clicked"; r["id"] = id;
+            r["row"] = item->listWidget()->row(item); r["text"] = item->text(); send_json(r);
+        });
+        QObject::connect(lw, &QListWidget::itemDoubleClicked, [id](QListWidgetItem* item) {
+            QJsonObject r; r["event"] = "item_double_clicked"; r["id"] = id;
+            r["row"] = item->listWidget()->row(item); r["text"] = item->text(); send_json(r);
+        });
+        QObject::connect(lw, &QListWidget::currentRowChanged, [id](int row) {
+            QJsonObject r; r["event"] = "current_row_changed"; r["id"] = id; r["value"] = row; send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "add_list_item") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                lw->addItem(cmd["text"].toString());
+            }
+        }
+    }
+    else if (name == "add_list_items") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                QJsonArray items = cmd["items"].toArray();
+                for (const auto& item : items) lw->addItem(item.toString());
+            }
+        }
+    }
+    else if (name == "list_remove_item") {
+        int id = cmd["id"].toInt();
+        int row = cmd["row"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                QListWidgetItem* item = lw->takeItem(row);
+                delete item;
+            }
+        }
+    }
+    else if (name == "set_list_current_row") {
+        int id = cmd["id"].toInt();
+        int row = cmd["row"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                lw->setCurrentRow(row);
+            }
+        }
+    }
+    else if (name == "get_list_current_row") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                send_value_event("row_result", id, lw->currentRow());
+            }
+        }
+    }
+    else if (name == "set_list_item_text") {
+        int id = cmd["id"].toInt();
+        int row = cmd["row"].toInt();
+        QString text = cmd["text"].toString();
+        if (g_widgets.count(id)) {
+            if (auto* lw = qobject_cast<QListWidget*>(g_widgets[id])) {
+                QListWidgetItem* item = lw->item(row);
+                if (item) item->setText(text);
+            }
+        }
+    }
+    else if (name == "create_scrollarea") {
+        int id = g_next_id++;
+        QScrollArea* sa = new QScrollArea();
+        sa->setWidgetResizable(cmd.value("resizable").toBool(true));
+        g_widgets[id] = sa;
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "scrollarea_set_widget") {
+        int id = cmd["id"].toInt();
+        int child_id = cmd["child_id"].toInt();
+        if (g_widgets.count(id) && g_widgets.count(child_id)) {
+            if (auto* sa = qobject_cast<QScrollArea*>(g_widgets[id])) {
+                sa->setWidget(g_widgets[child_id]);
+            }
+        }
+    }
+    else if (name == "create_scrollbar") {
+        int id = g_next_id++;
+        Qt::Orientation orient = cmd["orientation"].toString("vertical") == "horizontal"
+            ? Qt::Horizontal : Qt::Vertical;
+        QScrollBar* sb = new QScrollBar(orient);
+        sb->setMinimum(cmd.value("min").toInt(0));
+        sb->setMaximum(cmd.value("max").toInt(100));
+        sb->setValue(cmd.value("value").toInt(0));
+        g_widgets[id] = sb;
+        QObject::connect(sb, &QScrollBar::valueChanged, [id](int val) {
+            QJsonObject r; r["event"] = "value_changed"; r["id"] = id; r["value"] = val; send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "create_toolbutton") {
+        int id = g_next_id++;
+        QToolButton* tb = new QToolButton();
+        if (cmd.contains("text")) tb->setText(cmd["text"].toString());
+        if (cmd.contains("style")) {
+            QString style = cmd["style"].toString();
+            if (style == "text") tb->setToolButtonStyle(Qt::ToolButtonTextOnly);
+            else if (style == "icon") tb->setToolButtonStyle(Qt::ToolButtonIconOnly);
+            else if (style == "text_beside") tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            else if (style == "text_under") tb->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        }
+        g_widgets[id] = tb;
+        QObject::connect(tb, &QToolButton::clicked, [id]() {
+            send_event("clicked", id);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "set_toolbutton_menu") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* tb = qobject_cast<QToolButton*>(g_widgets[id])) {
+                QJsonArray items = cmd["items"].toArray();
+                QMenu* menu = new QMenu(tb);
+                for (const auto& item : items) {
+                    QAction* act = menu->addAction(item.toString());
+                    QObject::connect(act, &QAction::triggered, [id](bool) {
+                        send_event("menu_triggered", id);
+                    });
+                }
+                tb->setMenu(menu);
+                tb->setPopupMode(QToolButton::InstantPopup);
+            }
+        }
+    }
+    else if (name == "create_listview") {
+        int id = g_next_id++;
+        QListView* lv = new QListView();
+        QStringListModel* model = new QStringListModel(lv);
+        lv->setModel(model);
+        g_widgets[id] = lv;
+        lv->setProperty("exqt_model", QVariant::fromValue<QObject*>(model));
+        QObject::connect(lv->selectionModel(), &QItemSelectionModel::currentRowChanged, [id](const QModelIndex& cur, const QModelIndex&) {
+            QJsonObject r; r["event"] = "current_row_changed"; r["id"] = id; r["value"] = cur.row(); send_json(r);
+        });
+        QObject::connect(lv, &QListView::doubleClicked, [id](const QModelIndex& idx) {
+            QJsonObject r; r["event"] = "item_double_clicked"; r["id"] = id; r["value"] = idx.row(); send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "listview_set_strings") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lv = qobject_cast<QListView*>(g_widgets[id])) {
+                QStringListModel* model = qobject_cast<QStringListModel*>(lv->model());
+                QStringList list;
+                QJsonArray items = cmd["items"].toArray();
+                for (const auto& item : items) list << item.toString();
+                if (!model) {
+                    model = new QStringListModel(lv);
+                    lv->setModel(model);
+                }
+                model->setStringList(list);
+            }
+        }
+    }
+    else if (name == "get_listview_current") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lv = qobject_cast<QListView*>(g_widgets[id])) {
+                send_value_event("row_result", id, lv->currentIndex().row());
+            }
+        }
+    }
+    else if (name == "set_listview_current") {
+        int id = cmd["id"].toInt();
+        int row = cmd["row"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* lv = qobject_cast<QListView*>(g_widgets[id])) {
+                QModelIndex idx = lv->model()->index(row, 0);
+                lv->setCurrentIndex(idx);
+            }
+        }
+    }
+    else if (name == "create_tableview") {
+        int id = g_next_id++;
+        int rows = cmd["rows"].toInt(0);
+        int cols = cmd["columns"].toInt(0);
+        QTableView* tv = new QTableView();
+        QStandardItemModel* model = new QStandardItemModel(rows, cols, tv);
+        tv->setModel(model);
+        g_widgets[id] = tv;
+        tv->horizontalHeader()->setStretchLastSection(true);
+        QObject::connect(tv, &QTableView::clicked, [id](const QModelIndex& idx) {
+            QJsonObject r; r["event"] = "cell_clicked"; r["id"] = id;
+            r["row"] = idx.row(); r["column"] = idx.column(); send_json(r);
+        });
+        QObject::connect(tv, &QTableView::doubleClicked, [id](const QModelIndex& idx) {
+            QJsonObject r; r["event"] = "cell_double_clicked"; r["id"] = id;
+            r["row"] = idx.row(); r["column"] = idx.column(); send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "tableview_set_item") {
+        int id = cmd["id"].toInt();
+        int row = cmd["row"].toInt();
+        int col = cmd["column"].toInt();
+        QString text = cmd["text"].toString();
+        if (g_widgets.count(id)) {
+            if (auto* tv = qobject_cast<QTableView*>(g_widgets[id])) {
+                if (auto* model = qobject_cast<QStandardItemModel*>(tv->model())) {
+                    QStandardItem* item = new QStandardItem(text);
+                    model->setItem(row, col, item);
+                }
+            }
+        }
+    }
+    else if (name == "tableview_set_headers") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* tv = qobject_cast<QTableView*>(g_widgets[id])) {
+                if (auto* model = qobject_cast<QStandardItemModel*>(tv->model())) {
+                    QStringList headers;
+                    QJsonArray arr = cmd["headers"].toArray();
+                    for (const auto& h : arr) headers << h.toString();
+                    model->setHorizontalHeaderLabels(headers);
+                }
+            }
+        }
+    }
+    else if (name == "create_toolbox") {
+        int id = g_next_id++;
+        QToolBox* tb = new QToolBox();
+        g_widgets[id] = tb;
+        QObject::connect(tb, &QToolBox::currentChanged, [id](int index) {
+            QJsonObject r; r["event"] = "current_changed"; r["id"] = id; r["value"] = index; send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "toolbox_add_item") {
+        int id = cmd["id"].toInt();
+        int widget_id = cmd["widget_id"].toInt();
+        QString label = cmd["label"].toString();
+        if (g_widgets.count(id) && g_widgets.count(widget_id)) {
+            if (auto* tb = qobject_cast<QToolBox*>(g_widgets[id])) {
+                tb->addItem(g_widgets[widget_id], label);
+            }
+        }
+    }
+    else if (name == "create_timeedit") {
+        int id = g_next_id++;
+        QTimeEdit* te = new QTimeEdit();
+        if (cmd.contains("format")) te->setDisplayFormat(cmd["format"].toString("HH:mm:ss"));
+        if (cmd.contains("time")) te->setTime(QTime::fromString(cmd["time"].toString(), "HH:mm:ss"));
+        g_widgets[id] = te;
+        QObject::connect(te, &QTimeEdit::timeChanged, [id](const QTime& t) {
+            QJsonObject r; r["event"] = "value_changed"; r["id"] = id; r["value"] = t.toString("HH:mm:ss"); send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "create_dateedit") {
+        int id = g_next_id++;
+        QDateEdit* de = new QDateEdit();
+        if (cmd.contains("format")) de->setDisplayFormat(cmd["format"].toString("yyyy-MM-dd"));
+        if (cmd.contains("date")) de->setDate(QDate::fromString(cmd["date"].toString(), "yyyy-MM-dd"));
+        g_widgets[id] = de;
+        QObject::connect(de, &QDateEdit::dateChanged, [id](const QDate& d) {
+            QJsonObject r; r["event"] = "value_changed"; r["id"] = id; r["value"] = d.toString("yyyy-MM-dd"); send_json(r);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "create_fontcombobox") {
+        int id = g_next_id++;
+        QFontComboBox* fc = new QFontComboBox();
+        if (cmd.contains("font")) {
+            QFontDatabase db;
+            if (db.families().contains(cmd["font"].toString())) fc->setCurrentFont(QFont(cmd["font"].toString()));
+        }
+        g_widgets[id] = fc;
+        QObject::connect(fc, &QFontComboBox::currentFontChanged, [id](const QFont& f) {
+            QJsonObject r; r["event"] = "font_changed"; r["id"] = id; r["value"] = f.family(); send_json(r);
+        });
+        QJsonObject rr; rr["event"] = "widget_created"; rr["id"] = id; send_json(rr);
+    }
+    else if (name == "get_fontcombobox_current") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* fc = qobject_cast<QFontComboBox*>(g_widgets[id])) {
+                QJsonObject r; r["event"] = "font_result"; r["id"] = id; r["value"] = fc->currentFont().family(); send_json(r);
+            }
+        }
+    }
+    else if (name == "create_commandlinkbutton") {
+        int id = g_next_id++;
+        QCommandLinkButton* cl = new QCommandLinkButton(cmd.value("text").toString());
+        if (cmd.contains("description")) cl->setDescription(cmd["description"].toString());
+        g_widgets[id] = cl;
+        QObject::connect(cl, &QCommandLinkButton::clicked, [id]() {
+            send_event("clicked", id);
+        });
+        QJsonObject r; r["event"] = "widget_created"; r["id"] = id; send_json(r);
+    }
+    else if (name == "set_commandlink_description") {
+        int id = cmd["id"].toInt();
+        if (g_widgets.count(id)) {
+            if (auto* cl = qobject_cast<QCommandLinkButton*>(g_widgets[id])) {
+                cl->setDescription(cmd["text"].toString());
+            }
+        }
+    }
     else if (name == "create_vbox") {
         int id = g_next_id++;
         g_layouts[id] = new QVBoxLayout();
@@ -501,20 +827,26 @@ void process_command(const QJsonObject& cmd) {
         int value = cmd["value"].toInt();
         if (g_widgets.count(id)) {
             if (auto* sl = qobject_cast<QSlider*>(g_widgets[id])) sl->setValue(value);
-            else if (auto* cb = qobject_cast<QComboBox*>(g_widgets[id])) cb->setCurrentIndex(value);
+            else if (auto* dial = qobject_cast<QDial*>(g_widgets[id])) dial->setValue(value);
+            else if (auto* sbar = qobject_cast<QScrollBar*>(g_widgets[id])) sbar->setValue(value);
+            else if (auto* pbar = qobject_cast<QProgressBar*>(g_widgets[id])) pbar->setValue(value);
+            else if (auto* dspin = qobject_cast<QDoubleSpinBox*>(g_widgets[id])) dspin->setValue(cmd["value"].toDouble());
             else if (auto* sb = qobject_cast<QSpinBox*>(g_widgets[id])) sb->setValue(value);
-            else if (auto* pb = qobject_cast<QProgressBar*>(g_widgets[id])) pb->setValue(value);
+            else if (auto* cb = qobject_cast<QComboBox*>(g_widgets[id])) cb->setCurrentIndex(value);
         }
     }
     else if (name == "get_value") {
         int id = cmd["id"].toInt();
         if (g_widgets.count(id)) {
-            int value = 0;
+            double value = 0;
             if (auto* sl = qobject_cast<QSlider*>(g_widgets[id])) value = sl->value();
-            else if (auto* cb = qobject_cast<QComboBox*>(g_widgets[id])) value = cb->currentIndex();
+            else if (auto* dial = qobject_cast<QDial*>(g_widgets[id])) value = dial->value();
+            else if (auto* sbar = qobject_cast<QScrollBar*>(g_widgets[id])) value = sbar->value();
+            else if (auto* pbar = qobject_cast<QProgressBar*>(g_widgets[id])) value = pbar->value();
+            else if (auto* dspin = qobject_cast<QDoubleSpinBox*>(g_widgets[id])) value = dspin->value();
             else if (auto* sb = qobject_cast<QSpinBox*>(g_widgets[id])) value = sb->value();
-            else if (auto* pb = qobject_cast<QProgressBar*>(g_widgets[id])) value = pb->value();
-            send_value_event("value_result", id, value);
+            else if (auto* cb = qobject_cast<QComboBox*>(g_widgets[id])) value = cb->currentIndex();
+            send_value_event("value_result", id, (int)value);
         }
     }
     else if (name == "set_checked") {
@@ -559,6 +891,7 @@ void process_command(const QJsonObject& cmd) {
         if (g_widgets.count(id)) {
             if (auto* tw = qobject_cast<QTabWidget*>(g_widgets[id])) tw->setCurrentIndex(index);
             else if (auto* cb = qobject_cast<QComboBox*>(g_widgets[id])) cb->setCurrentIndex(index);
+            else if (auto* tb = qobject_cast<QToolBox*>(g_widgets[id])) tb->setCurrentIndex(index);
         }
     }
     else if (name == "add_tree_item") {

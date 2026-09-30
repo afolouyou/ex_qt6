@@ -77,6 +77,17 @@ defmodule ExQt6.ComprehensiveTest do
       |> run_test("Batch: multiple commands", fn -> test_batch(app) end)
       |> run_test("Pipeline: chained setters", fn -> test_pipeline(app) end)
       |> run_test("Named widgets: ETS registry", fn -> test_named_widgets(app) end)
+      |> run_test("Widget: QListWidget", fn -> test_listwidget(app) end)
+      |> run_test("Widget: QScrollArea", fn -> test_scrollarea(app) end)
+      |> run_test("Widget: QScrollBar (v)", fn -> test_scrollbar(app) end)
+      |> run_test("Widget: QToolButton", fn -> test_toolbutton(app) end)
+      |> run_test("Widget: QListView", fn -> test_listview(app) end)
+      |> run_test("Widget: QTableView", fn -> test_tableview(app) end)
+      |> run_test("Widget: QToolBox", fn -> test_toolbox(app) end)
+      |> run_test("Widget: QTimeEdit", fn -> test_timeedit(app) end)
+      |> run_test("Widget: QDateEdit", fn -> test_dateedit(app) end)
+      |> run_test("Widget: QFontComboBox", fn -> test_fontcombobox(app) end)
+      |> run_test("Widget: QCommandLinkButton", fn -> test_commandlink(app) end)
 
     # Summary
     results = List.flatten(results)
@@ -91,6 +102,7 @@ defmodule ExQt6.ComprehensiveTest do
 
     if failed > 0 do
       IO.puts("\nFailed tests:")
+
       results
       |> Enum.with_index()
       |> Enum.each(fn {r, i} ->
@@ -101,6 +113,7 @@ defmodule ExQt6.ComprehensiveTest do
     IO.puts("\nAll widgets created — showing window for 2 seconds...")
     show_final(app)
     Process.sleep(2000)
+    GenServer.stop(app)
     System.halt(0)
   end
 
@@ -328,7 +341,14 @@ defmodule ExQt6.ComprehensiveTest do
 
   defp test_font(app) do
     {:ok, lbl} = ExQt6.Widget.new_label(app, "Styled")
-    ExQt6.Widget.set_font(lbl, app, family: "Arial", size: 20, bold: true, italic: true, underline: true)
+
+    ExQt6.Widget.set_font(lbl, app,
+      family: "Arial",
+      size: 20,
+      bold: true,
+      italic: true,
+      underline: true
+    )
   end
 
   defp test_geometry(app) do
@@ -621,13 +641,15 @@ defmodule ExQt6.ComprehensiveTest do
     {:ok, lbl3} = ExQt6.Widget.new_label(app, "C")
     Process.sleep(100)
 
-    :ok = ExQt6.App.batch(app, [
-      %{name: "set_text", id: lbl1.id, text: "Batch1"},
-      %{name: "set_text", id: lbl2.id, text: "Batch2"},
-      %{name: "set_text", id: lbl3.id, text: "Batch3"},
-      %{name: "set_tooltip", id: lbl1.id, tooltip: "tip1"},
-      %{name: "set_tooltip", id: lbl2.id, tooltip: "tip2"},
-    ])
+    :ok =
+      ExQt6.App.batch(app, [
+        %{name: "set_text", id: lbl1.id, text: "Batch1"},
+        %{name: "set_text", id: lbl2.id, text: "Batch2"},
+        %{name: "set_text", id: lbl3.id, text: "Batch3"},
+        %{name: "set_tooltip", id: lbl1.id, tooltip: "tip1"},
+        %{name: "set_tooltip", id: lbl2.id, tooltip: "tip2"}
+      ])
+
     Process.sleep(300)
 
     {:ok, t1} = ExQt6.Widget.get_text(lbl1, app)
@@ -667,6 +689,7 @@ defmodule ExQt6.ComprehensiveTest do
 
     {:ok, btn} = ExQt6.Widget.new_button(app, "Named")
     {:ok, lbl} = ExQt6.Widget.new_label(app, "Named")
+    drain_qt_events()
 
     :ets.insert(tab_name, {:ok_button, btn})
     :ets.insert(tab_name, {:info_label, lbl})
@@ -675,6 +698,75 @@ defmodule ExQt6.ComprehensiveTest do
     [{_, found_lbl}] = :ets.lookup(tab_name, :info_label)
     true = btn.id == found_btn.id
     true = lbl.id == found_lbl.id
+  end
+
+  # Drains any queued Qt events so they don't pollute later widget_created lookups.
+  defp drain_qt_events, do: drain_qt_events(20)
+
+  defp drain_qt_events(0), do: :ok
+
+  defp drain_qt_events(n) do
+    receive do
+      {:qt_event, _e} -> drain_qt_events(n - 1)
+    after
+      50 -> :ok
+    end
+  end
+
+  # --- P0 Widget Tests ---
+
+  defp test_listwidget(app) do
+    {:ok, lw} = ExQt6.Widget.new_listwidget(app)
+    true = lw.type == :listwidget
+
+    :ok = ExQt6.Widget.add_list_items(lw, app, ["A", "B", "C"])
+    :ok = ExQt6.Widget.add_list_item(lw, app, "D")
+    ExQt6.Widget.set_list_current_row(lw, app, 1)
+    Process.sleep(100)
+    {:ok, row} = ExQt6.Widget.get_list_current_row(lw, app)
+    1 = row
+
+    :ok = ExQt6.Widget.set_list_item_text(lw, app, 0, "A1")
+    :ok = ExQt6.Widget.list_remove_item(lw, app, 3)
+
+    lw = ExQt6.Widget.set_enabled(lw, app, false)
+    true = is_struct(lw, ExQt6.Widget)
+    lw = ExQt6.Widget.set_enabled(lw, app, true)
+    true = is_struct(lw, ExQt6.Widget)
+  end
+
+  defp test_scrollarea(app) do
+    {:ok, sa} = ExQt6.Widget.new_scrollarea(app, resizable: true)
+    Process.sleep(100)
+    true = sa.type == :scrollarea
+
+    {:ok, inner} = ExQt6.Widget.new_label(app, "Scroll content")
+    Process.sleep(100)
+    :ok = ExQt6.Widget.scrollarea_set_widget(sa, app, inner)
+  end
+
+  defp test_scrollbar(app) do
+    {:ok, vsb} =
+      ExQt6.Widget.new_scrollbar(app, orientation: "vertical", min: 0, max: 200, value: 10)
+
+    Process.sleep(100)
+    true = vsb.type == :scrollbar
+
+    ExQt6.Widget.set_value(vsb, app, 150)
+    {:ok, v} = ExQt6.Widget.get_value(vsb, app)
+    150 = v
+  end
+
+  defp test_toolbutton(app) do
+    {:ok, tb} = ExQt6.Widget.new_toolbutton(app, text: "Tools", style: "text")
+    Process.sleep(100)
+    true = tb.type == :toolbutton
+
+    :ok = ExQt6.Widget.set_toolbutton_menu(tb, app, ["Option 1", "Option 2"])
+    tb = ExQt6.Widget.set_enabled(tb, app, false)
+    true = is_struct(tb, ExQt6.Widget)
+    tb = ExQt6.Widget.set_enabled(tb, app, true)
+    true = is_struct(tb, ExQt6.Widget)
   end
 
   # --- Final Window ---
@@ -757,6 +849,96 @@ defmodule ExQt6.ComprehensiveTest do
 
     ExQt6.Widget.set_main_widget(mw, app, central)
     ExQt6.Widget.show(mw, app)
+  end
+
+  # --- P1 Widget Tests ---
+
+  defp test_listview(app) do
+    {:ok, lv} = ExQt6.Widget.new_listview(app)
+    true = lv.type == :listview
+
+    :ok = ExQt6.Widget.listview_set_strings(lv, app, ["A", "B", "C"])
+    :ok = ExQt6.Widget.set_listview_current(lv, app, 2)
+    Process.sleep(100)
+    {:ok, row} = ExQt6.Widget.get_listview_current(lv, app)
+    2 = row
+
+    lv = ExQt6.Widget.set_enabled(lv, app, false)
+    true = is_struct(lv, ExQt6.Widget)
+    lv = ExQt6.Widget.set_enabled(lv, app, true)
+    true = is_struct(lv, ExQt6.Widget)
+  end
+
+  defp test_tableview(app) do
+    {:ok, tv} = ExQt6.Widget.new_tableview(app, 3, 2)
+    true = tv.type == :tableview
+
+    :ok = ExQt6.Widget.tableview_set_headers(tv, app, ["Col1", "Col2"])
+    :ok = ExQt6.Widget.tableview_set_item(tv, app, 0, 0, "x1")
+    :ok = ExQt6.Widget.tableview_set_item(tv, app, 2, 1, "y3")
+
+    tv = ExQt6.Widget.set_enabled(tv, app, false)
+    true = is_struct(tv, ExQt6.Widget)
+    tv = ExQt6.Widget.set_enabled(tv, app, true)
+    true = is_struct(tv, ExQt6.Widget)
+  end
+
+  defp test_toolbox(app) do
+    {:ok, tb} = ExQt6.Widget.new_toolbox(app)
+    true = tb.type == :toolbox
+
+    {:ok, btn1} = ExQt6.Widget.new_button(app, "Page 1")
+    {:ok, btn2} = ExQt6.Widget.new_button(app, "Page 2")
+    :ok = ExQt6.Widget.toolbox_add_item(tb, app, btn1, "Tab A")
+    :ok = ExQt6.Widget.toolbox_add_item(tb, app, btn2, "Tab B")
+
+    tb = ExQt6.Widget.set_enabled(tb, app, false)
+    true = is_struct(tb, ExQt6.Widget)
+    tb = ExQt6.Widget.set_enabled(tb, app, true)
+    true = is_struct(tb, ExQt6.Widget)
+  end
+
+  defp test_timeedit(app) do
+    {:ok, te} = ExQt6.Widget.new_timeedit(app, format: "HH:mm:ss", time: "12:34:56")
+    true = te.type == :timeedit
+
+    te = ExQt6.Widget.set_enabled(te, app, false)
+    true = is_struct(te, ExQt6.Widget)
+    te = ExQt6.Widget.set_enabled(te, app, true)
+    true = is_struct(te, ExQt6.Widget)
+  end
+
+  defp test_dateedit(app) do
+    {:ok, de} = ExQt6.Widget.new_dateedit(app, format: "yyyy-MM-dd", date: "2024-05-01")
+    true = de.type == :dateedit
+
+    de = ExQt6.Widget.set_enabled(de, app, false)
+    true = is_struct(de, ExQt6.Widget)
+    de = ExQt6.Widget.set_enabled(de, app, true)
+    true = is_struct(de, ExQt6.Widget)
+  end
+
+  defp test_fontcombobox(app) do
+    {:ok, fc} = ExQt6.Widget.new_fontcombobox(app)
+    true = fc.type == :fontcombobox
+
+    Process.sleep(100)
+    {:ok, family} = ExQt6.Widget.get_fontcombobox_current(fc, app)
+    true = is_binary(family) and family != ""
+  end
+
+  defp test_commandlink(app) do
+    {:ok, cl} =
+      ExQt6.Widget.new_commandlinkbutton(app, "Save", description: "Save the file")
+
+    true = cl.type == :commandlinkbutton
+
+    :ok = ExQt6.Widget.set_commandlink_description(cl, app, "Save to disk")
+
+    cl = ExQt6.Widget.set_enabled(cl, app, false)
+    true = is_struct(cl, ExQt6.Widget)
+    cl = ExQt6.Widget.set_enabled(cl, app, true)
+    true = is_struct(cl, ExQt6.Widget)
   end
 end
 

@@ -4,17 +4,17 @@
 
 | Metric | Count |
 |--------|-------|
-| Comandos no daemon C++ | 132 |
-| Eventos suportados | 24 (click, value_changed, text_changed, close, mouse_*, key_*, timer, layout_created, table_*, color_result, font_result, input_result, progress_canceled) |
-| Widgets | 24 (window, button, label, lineedit, combobox, checkbox, radiobutton, slider, spinbox, progressbar, tabwidget, groupbox, textedit, tree, buttongroup, splitter, dockwidget, textbrowser, doublespinbox, datetimeedit, lcdnumber, calendarwidget, dial, stackedwidget) |
+| Comandos no daemon C++ | 146 |
+| Eventos suportados | 24 (click, value_changed, text_changed, close, mouse_*, key_*, timer, layout_created, table_*, color_result, font_result, input_result, progress_canceled, item_clicked, item_double_clicked, current_row_changed) |
+| Widgets | 28 (window, button, label, lineedit, combobox, checkbox, radiobutton, slider, spinbox, progressbar, tabwidget, groupbox, textedit, tree, buttongroup, splitter, dockwidget, textbrowser, doublespinbox, datetimeedit, lcdnumber, calendarwidget, dial, stackedwidget, listwidget, scrollarea, scrollbar, toolbutton) |
 | Layouts | 4 (vbox, hbox, grid, form) + splitter |
 | Dialogs | 4 (msgbox, file_dialog, color_dialog, font_dialog, input_dialog, progress_dialog) |
-| Funções Elixir (Widget) | 115 |
+| Funções Elixir (Widget) | 127 |
 | Funções Elixir (Layout) | 12 |
 | Funções Elixir (Timer) | 4 |
-| Total de funções públicas | 131 |
+| Total de funções públicas | 143 |
 | Exemplos | 7 (widget_showcase, task_manager, auto_counter, click_counter, click_counter_sup, calculator, notepad) |
-| Testes | 30 (unit) + 62 (comprehensive) = 92 total |
+| Testes | 30 (unit) + 66 (comprehensive) = 96 total |
 
 ---
 
@@ -67,13 +67,15 @@
 - [x] QTextBrowser (renderização de HTML)
 - [x] QDoubleSpinBox (valores decimais)
 - [x] QDateTimeEdit (date/time picker)
-- [ ] QToolButton (botão compacto pra toolbars)
+- [x] QToolButton (botão compacto pra toolbars)
 - [x] QLCDNumber (display numérico estilo LCD)
 - [x] QCalendarWidget (seletor de calendário)
 - [x] QDial (botão circular tipo volume)
 - [ ] QWizard / QWizardPage (assistente multi-step)
 - [x] QStackedWidget (múltiplas páginas, só uma visível)
-- [ ] QScrollBar (scroll manual)
+- [x] QListWidget (lista item-based)
+- [x] QScrollArea (área de rolagem)
+- [x] QScrollBar (scroll manual)
 
 ### Layouts Novos
 - [ ] QStackedLayout (empilhar layouts, mostrar só um)
